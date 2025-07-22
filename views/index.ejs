@@ -104,7 +104,8 @@
             }, 10_000);
         }
 
-
+        // <-- C’est ici qu’il faut appeler notifyElectronPopup
+    notifyElectronPopup();
     });
 
     socket.addEventListener('open', () => {
@@ -116,6 +117,34 @@
         console.log('Connexion WebSocket fermée.');
         errorBanner.style.display = 'block';
     });
+
+        socket.addEventListener("open", () => {
+            console.log("Connexion WebSocket établie.");
+            errorBanner.style.display = "none";
+        });
+
+        socket.addEventListener("close", () => {
+            console.log("Connexion WebSocket fermée.");
+            errorBanner.style.display = "block";
+        });
+
+        // WebSocket local pour communication avec Electron
+        const localWs = new WebSocket("ws://localhost:8081");
+
+        localWs.onopen = () => {
+            console.log("WebSocket local connecté");
+        };
+
+        localWs.onerror = (err) => {
+            console.error("Erreur WebSocket local", err);
+        };
+
+        function notifyElectronPopup() {
+            if (localWs.readyState === WebSocket.OPEN) {
+                localWs.send("show-popup");
+            }
+        }
+   
 </script>
 
 </html>
