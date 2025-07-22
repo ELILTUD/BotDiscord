@@ -2,10 +2,10 @@
 <html lang="fr">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>rawchat</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/styles.css" />
     <style>
         #error-banner {
             display: none;
@@ -34,6 +34,28 @@
     const socket = new WebSocket(`${protocol}://${location.host}/?channelId=<%= channelId %>`);
     const messagesContainer = document.getElementById('messages');
     const errorBanner = document.getElementById('error-banner');
+
+    // WebSocket local pour communication avec Electron
+    const localWs = new WebSocket("ws://localhost:8081");
+
+    localWs.onopen = () => {
+        console.log("WebSocket local connecté");
+    };
+
+    localWs.onerror = (err) => {
+        console.error("Erreur WebSocket local", err);
+    };
+
+    function notifyElectronPopup() {
+        if (localWs.readyState === WebSocket.OPEN) {
+            localWs.send("show-popup");
+        }
+    }
+    function notifyElectronHidePopup() {
+        if (localWs.readyState === WebSocket.OPEN) {
+            localWs.send("hide-popup");
+        }
+    }
 
     socket.addEventListener('message', (event) => {
         const messageData = JSON.parse(event.data);
@@ -67,10 +89,8 @@
             ${attachmentsHTML}
         `;
 
-        // Add this new code after creating the message element
         const paragraph = messageElement.querySelector('.content p');
         if (paragraph) {
-            // Set custom property based on content length
             paragraph.style.setProperty('--char-length', messageData.content.length);
         }
 
@@ -91,21 +111,22 @@
         messagesContainer.innerHTML = '';
         messagesContainer.appendChild(messageElement);
 
-        // if the message contains a video, empty the messages container after it has been played
+        // Gestion de la suppression et des signaux Electron
         if (messageElement.querySelector('video')) {
             const videoElement = messageElement.querySelector('video');
             videoElement.addEventListener('ended', () => {
                 messagesContainer.innerHTML = '';
+                notifyElectronHidePopup();
             });
         } else {
-            // if the message does not contain a video, empty the messages container after 5 seconds
             setTimeout(() => {
                 messagesContainer.innerHTML = '';
-            }, 10_000);
+                notifyElectronHidePopup();
+            }, 10000);
         }
 
-        // <-- C’est ici qu’il faut appeler notifyElectronPopup
-    notifyElectronPopup();
+        // Afficher la popup Electron quand un message arrive
+        notifyElectronPopup();
     });
 
     socket.addEventListener('open', () => {
@@ -117,34 +138,6 @@
         console.log('Connexion WebSocket fermée.');
         errorBanner.style.display = 'block';
     });
-
-        socket.addEventListener("open", () => {
-            console.log("Connexion WebSocket établie.");
-            errorBanner.style.display = "none";
-        });
-
-        socket.addEventListener("close", () => {
-            console.log("Connexion WebSocket fermée.");
-            errorBanner.style.display = "block";
-        });
-
-        // WebSocket local pour communication avec Electron
-        const localWs = new WebSocket("ws://localhost:8081");
-
-        localWs.onopen = () => {
-            console.log("WebSocket local connecté");
-        };
-
-        localWs.onerror = (err) => {
-            console.error("Erreur WebSocket local", err);
-        };
-
-        function notifyElectronPopup() {
-            if (localWs.readyState === WebSocket.OPEN) {
-                localWs.send("show-popup");
-            }
-        }
-   
 </script>
 
 </html>
