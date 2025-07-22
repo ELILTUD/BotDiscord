@@ -138,11 +138,18 @@ bot.on('messageCreate', (message) => {
     }
 
     if (message.content.startsWith('!url')) {
-        const protocol = useSecureWs ? 'https' : 'http';
-        const botLink = `${protocol}://${baseUrl}${(port === 80 || hideWebViewPort) ? '' : `:${port}`}`;
-        const url = `${botLink}/view/${channelId}`;
-        message.channel.send(`🔗 URL pour **${message.channel.name}** : ${url}`);
+    const protocol = useSecureWs ? 'https' : 'http';
+    let botLink = `${protocol}://${baseUrl}`;
+
+    // Ajoute le port uniquement si on est en local ET que le port n'est pas 80
+    if (baseUrl === 'localhost' && port && port !== 80) {
+        botLink += `:${port}`;
     }
+
+    const url = `${botLink}/view/${channelId}`;
+    message.channel.send(`🔗 URL pour **${message.channel.name}** : ${url}`);
+}
+
 
     if (message.content.startsWith('!help')) {
         message.channel.send(`
