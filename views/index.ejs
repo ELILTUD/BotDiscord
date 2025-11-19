@@ -25,37 +25,16 @@
     <div id="messages"></div>
     <div id="error-banner">WebSocket connexion lost!</div>
 </body>
+
 <script>
     const channelId = "<%= channelId %>";
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
     const baseUrl = "<%= baseUrl %>";
-    const hideWebsocketPort = "<%= hideWebsocketPort %>";
-    const wsPort = "<%= wsPort %>";
-    const socket = new WebSocket(`${protocol}://${location.host}/?channelId=<%= channelId %>`);
+    
+    // Render = toujours wss://
+    const socket = new WebSocket(`wss://${baseUrl.replace('https://', '')}/ws?channelId=${channelId}`);
+
     const messagesContainer = document.getElementById('messages');
     const errorBanner = document.getElementById('error-banner');
-
-    // WebSocket local pour communication avec Electron
-    const localWs = new WebSocket("ws://localhost:8081");
-
-    localWs.onopen = () => {
-        console.log("WebSocket local connecté");
-    };
-
-    localWs.onerror = (err) => {
-        console.error("Erreur WebSocket local", err);
-    };
-
-    function notifyElectronPopup() {
-        if (localWs.readyState === WebSocket.OPEN) {
-            localWs.send("show-popup");
-        }
-    }
-    function notifyElectronHidePopup() {
-        if (localWs.readyState === WebSocket.OPEN) {
-            localWs.send("hide-popup");
-        }
-    }
 
     socket.addEventListener('message', (event) => {
         const messageData = JSON.parse(event.data);
@@ -81,8 +60,7 @@
                 <img class="avatar" src="${messageData.avatar}" alt="${messageData.username}" />
                 <strong class="username">${messageData.username}</strong>
             </div>` : `
-            <div class="message-header">
-            </div>`}
+            <div class="message-header"></div>`}
             <div class="content">
                 <p data-content="${messageData.content}">${messageData.content}</p>
             </div>
@@ -111,22 +89,12 @@
         messagesContainer.innerHTML = '';
         messagesContainer.appendChild(messageElement);
 
-        // Gestion de la suppression et des signaux Electron
-        if (messageElement.querySelector('video')) {
-            const videoElement = messageElement.querySelector('video');
-            videoElement.addEventListener('ended', () => {
-                messagesContainer.innerHTML = '';
-                notifyElectronHidePopup();
-            });
-        } else {
+        // Remove message after 10 seconds if not video
+        if (!messageElement.querySelector('video')) {
             setTimeout(() => {
                 messagesContainer.innerHTML = '';
-                notifyElectronHidePopup();
             }, 10000);
         }
-
-        // Afficher la popup Electron quand un message arrive
-        notifyElectronPopup();
     });
 
     socket.addEventListener('open', () => {
